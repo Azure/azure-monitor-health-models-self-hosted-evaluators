@@ -362,19 +362,26 @@ try {
         $events = @($state.properties.instanceView.events) + @($state.properties.containers | ForEach-Object { $_.properties.instanceView.events })
         Write-Verbose "Inspected $($events.Count) lifecycle events; event messages are not logged."
         if ($state.properties.provisioningState -ceq 'Failed') { throw 'Container provisioning failed.' }
-        if ($state.properties.containers[0].properties.instanceView.currentState.state -ceq 'Running') {
-            try {
-                $probe = Invoke-EvaluatorCommand az @('container', 'exec', '--name', $groupName, '--resource-group', $desired.resourceGroupName, '--container-name', 'evaluator',
-                    '--exec-command', '/usr/share/dotnet/dotnet /app/host/SelfHostedEvaluators.Host.dll probe ready',
-                    '--subscription', $SubscriptionId.ToString(), '--only-show-errors') 'readiness exec probe' -TimeoutSeconds 30
-                # az container exec does not reliably forward the remote process exit code.
-                if ($probe -match '(?m)^Evaluator probe ready succeeded\.\r?$') { $ready = $true; break }
-            }
-            catch { $ready = $false }
+        $container = $state.properties.containers[0]
+        $containerView = $container.properties.instanceView
+        if ($containerView.restartCount -gt 0) { throw "Evaluator container has restarted ($($containerView.restartCount) restarts). Inspect ACI state/events." }
+        $containerState = $containerView.currentState.state
+        $currentEvents = @($containerView.events | Where-Object {
+            -not $_.lastTimestamp -or -not $containerView.currentState.startTime -or
+            ([DateTimeOffset]$_.lastTimestamp).ToUnixTimeSeconds() -ge ([DateTimeOffset]$containerView.currentState.startTime).ToUnixTimeSeconds()
+        })
+        # ACI HTTP probe failures are transient while the container is Running and has not restarted.
+        $terminalWarnings = @($currentEvents | Where-Object {
+            $_.type -eq 'Warning' -and $_.name -notin @('Pulling', 'BackOff', 'FailedToPullImage') -and
+            -not ($containerState -ceq 'Running' -and $_.name -eq 'Failed' -and $_.message -cmatch '^(Readiness|Liveness) probe failed:')
+        })
+        if ($containerState -cnotin @('Running', 'Waiting', 'Pending') -or $terminalWarnings.Count) {
+            throw 'Evaluator container failed with an unrecognized/terminal state. Inspect ACI events and permissions.'
         }
+        if ($state.properties.provisioningState -ceq 'Succeeded' -and $state.properties.instanceView.state -ceq 'Running' -and $containerState -ceq 'Running') { $ready = $true; break }
         if ($attempt + 1 -lt $ReadinessAttempts) { Start-Sleep -Seconds $RetryDelaySeconds }
     }
-    if (-not $ready) { throw 'Readiness was not demonstrated within the retry budget.' }
+    if (-not $ready) { throw 'Timed out waiting for ARM Succeeded and the evaluator container Running.' }
     Write-Output "Deployment ready: $groupId image $ImageReference parameter-source sha256:$parameterRevision"
 }
 catch {

@@ -141,14 +141,13 @@ not into the final runtime image.
 disabled-roll-forward SDK pin. The final image uses
 `aspnet:10.0-noble-chiseled`, user **1654**, `/app/host` and
 `/app/packages/<id>/<version>/`. There is no shell, curl, published public port,
-volume or package fetch in the runtime image. Exec command arrays are:
+volume or package fetch in the runtime image. ACI probes use HTTP
+(`/healthz/ready`, `/healthz/live` on 8080). Container command arrays are:
 
 ```text
 entrypoint: ["/usr/share/dotnet/dotnet", "/app/host/SelfHostedEvaluators.Host.dll"]
 default arguments: ["run"]
 validation arguments: ["validate"]
-liveness exec: ["/usr/share/dotnet/dotnet", "/app/host/SelfHostedEvaluators.Host.dll", "probe", "live"]
-readiness exec: ["/usr/share/dotnet/dotnet", "/app/host/SelfHostedEvaluators.Host.dll", "probe", "ready"]
 ```
 
 `-Platform` is `linux/amd64` (default) or `linux/arm64`. Results contain:
@@ -313,7 +312,7 @@ It builds the actual Dockerfile with all three first-party packages, repeats
 identical inputs, builds a Static-only image, and recompiles a changed package.
 It checks package loading, configuration validation without networking,
 selected-package rejection, realistic environment size, immutable image-ID
-changes, non-root/no-shell layout, and real ready/live exec probes.
+changes, non-root/no-shell layout, and real HTTP ready/live probes.
 
 The production chiseled worker runs unchanged on an invocation-owned **internal**
 Docker network, with no published ports, package/config mounts or external
@@ -328,7 +327,7 @@ stable report IDs/bodies, configuration-only
 replacement, package-image replacement and rollback. Real Linux SIGTERM fails
 readiness and exits cleanly, including during a flushed partial SSE response
 with the five-second shutdown budget. SIGKILL is distinguished from graceful
-stop. Stalling PID 1 makes the actual liveness exec fail; an **explicit local
+stop. Stalling PID 1 makes the actual HTTP liveness probe fail; an **explicit local
 Docker restart** restores it. This does not prove ACI's automatic restart policy.
 
 Evidence (`acceptance.json`, request snapshots, image metadata and container
@@ -339,7 +338,7 @@ setting changes occur. Certificates/configuration in the evidence directory
 belong exclusively to local fake services; never substitute real secrets.
 
 This gate has passed on Linux/amd64. An additional `linux/arm64` emulated image
-build/load/readiness/shutdown check passed, but a cold exec liveness probe
+build/load/readiness/shutdown check passed, but a cold liveness probe
 intermittently failed under its existing two-second HTTP budget in emulation. Native
 amd64 clients reached that same server successfully. **Native ARM64 acceptance
 is not established**; do not infer it from emulation or loosen production probe

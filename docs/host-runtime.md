@@ -11,13 +11,10 @@ With the environment and image-style bundled packages configured:
 ```powershell
 dotnet run --project src\Host -- run
 dotnet run --project src\Host -- validate
-dotnet run --project src\Host -- probe ready
-dotnet run --project src\Host -- probe live
 ```
 
 No arguments selects `run`. Commands return zero on success, nonzero on
-validation/startup/probe failure. Unknown arguments fail without starting work.
-Use the built/published DLL rather than `dotnet run` in exec probes.
+validation/startup failure. Unknown arguments fail without starting work.
 
 `validate` loads the same local package catalog and immutable environment
 snapshot, using **Deployment** validation (including package auth/query schemas).
@@ -33,27 +30,21 @@ catalog using the same loader, without requiring plugin/model environment
 configuration or constructing sink clients, credentials, telemetry or tokens.
 The [package delivery script](image-delivery.md) uses this check before staging.
 
-`probe ready` / `probe live` construct only a bounded loopback HTTP probe,
-not the configuration, catalog, worker or auth services. They request
-`http://127.0.0.1:8080/healthz/ready` or `/healthz/live`, accept only HTTP 200,
-and fail closed on redirects, refusal, timeout or cancellation. The entire
-headers-only request is bounded to two seconds; proxies, redirects, cookies
-and ambient credentials are disabled.
-On HTTP 200 they write exactly `Evaluator probe ready succeeded.` or
-`Evaluator probe live succeeded.` to stdout; failed probes never write that
-marker. The deployment script requires the ready marker because Azure CLI
-container exec does not reliably forward the remote process exit code.
+The host serves `GET /healthz/ready` and `GET /healthz/live` on port 8080; both
+return HTTP 200 or 503 with no body. ACI `httpGet` probes use them. There is no
+probe CLI command, and the deployment script checks ACI instance state rather
+than calling them. The container tests query them over HTTP through a port
+published on the host's loopback address.
 
 ## Startup and ownership
 
-`HostRunner.RunAsync(string[], CancellationToken)` and
-`ProbeCommand.ExecuteAsync(string, CancellationToken)` are the command APIs.
+`HostRunner.RunAsync(string[], CancellationToken)` is the command API.
 `HostDependencies` supplies optional time, logging, credential, secret,
 HTTP and exporter boundaries for offline composition; defaults use production
 implementations, never test behavior. Its `ProbePort` composition parameter
 defaults to 8080; tests allocate a distinct loopback port for each real child
 process. This is not a process environment/ACI setting and does not create a
-production test-mode bypass. `ProbeCommand` also defaults to 8080.
+production test-mode bypass.
 
 The environment is copied once. Host options, the package catalog, the complete
 snapshot and package/custom-auth/query validation succeed **before** credentials
@@ -71,7 +62,8 @@ per-signal Information logs; a structured startup event is also emitted.
 Load summaries and fixed rejection phases are Debug diagnostics, never raw
 configuration, exception text or upstream responses.
 
-Kestrel listens **only** on IPv4 `127.0.0.1:8080`. There is no management API.
+Kestrel listens on `0.0.0.0:8080` so ACI `httpGet` probes can reach it; the
+port is not published. There is no management API.
 Readiness stays false until initialization and scheduler activation succeed,
 and fails immediately when shutdown starts. Liveness allows two minutes for
 initialization, then requires the scheduler's independent one-second supervisor
@@ -120,7 +112,7 @@ production certificate-validation bypass is introduced.
 `tests\SelfHostedEvaluators.Host.Tests` drives the real `HostRunner` in-process
 with an immutable startup environment, an offline fixture package, the actual
 auth pipeline, and injected credential/secret/transport/exporter boundaries. It
-launches the built Host as a child process only for CLI and probe commands. No
+launches the built Host as a child process only for CLI commands. No
 OS-wide trust or production HTTP exception is introduced. These tests do not
 restart the process or compare environments across restarts; the snapshot is read
 once at start, so verify changed cadence/TTL, new signals and removed-signal

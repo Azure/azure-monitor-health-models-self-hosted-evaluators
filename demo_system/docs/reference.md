@@ -75,11 +75,11 @@ ACI uses lightweight HTTP readiness and liveness probes, without starting a
 new .NET process for every probe. Deployment checks events from the current
 container incarnation at whole-second precision; warnings in its start second
 count as current. Probe warnings named `Failed` are transient only while the
-container is Running with zero restarts. Any restart fails deployment, and the
-private application readiness marker is still required. Old warnings do not
+container is Running with zero restarts. Any restart fails deployment. Deployment
+does not run an application readiness command. Old warnings do not
 invalidate later deployments.
 
-`DEMO_READY` does **not** confirm metric ingestion or health-report acceptance.
+`DEMO_READY` is printed once ARM reports Succeeded and all containers are Running. It does **not** confirm metric ingestion or health-report acceptance.
 Inspect Prometheus and ACI logs, run the queries in
 [signals.json](../config/signals.json) against the workspace, and check
 evaluator/report results separately. Follow the

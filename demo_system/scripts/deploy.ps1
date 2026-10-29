@@ -74,7 +74,7 @@ try {
     $ManifestPath = [IO.Path]::GetFullPath($ManifestPath)
     if ($WhatIfPreference) {
         $null = $PSCmdlet.ShouldProcess("$SubscriptionId/$ResourceGroupName ($Location, $NamePrefix)",
-            'Independently deploy demo prerequisites, build/push image, deploy private runtime and probe')
+            'Independently deploy demo prerequisites, build/push image and deploy private runtime')
         return
     }
     if (-not $PSCmdlet.ShouldProcess("$SubscriptionId/$ResourceGroupName", 'Deploy only the independent demo system, with ownership preflight')) { return }
@@ -236,10 +236,6 @@ try {
         if ($attempt -lt 29) { Start-Sleep -Seconds 10 }
     }
     if (-not $running) { throw 'Timed out waiting for ARM Succeeded and all three containers Running.' }
-    $phase = 'internal readiness probe'
-    $probe = Invoke-DemoAz @('container', 'exec', '--resource-group', $ResourceGroupName, '--name', $manifest.containerGroupName,
-        '--container-name', 'checkout-api', '--exec-command', '/app/control/probe.sh') $SubscriptionId $phase -TimeoutSeconds 60
-    Assert-DemoMarker $probe 'DEMO_READY'
     $manifest.status = 'Ready'
     Write-DemoJson $ManifestPath $manifest
     Write-Output "DEMO_READY. Manifest: $ManifestPath. Configure/deploy the evaluator independently; no evaluator deployment was invoked."

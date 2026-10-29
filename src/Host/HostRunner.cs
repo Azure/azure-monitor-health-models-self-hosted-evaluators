@@ -8,20 +8,18 @@ using SelfHostedEvaluators.Core.Packages;
 
 namespace SelfHostedEvaluators.Host;
 
-/// <summary>Dispatches offline validation and probe commands or composes the long-running evaluator host.</summary>
+/// <summary>Dispatches offline validation commands or composes the long-running evaluator host.</summary>
 /// <param name="dependencies">Optional service boundaries, defaulting to production implementations.</param>
 public sealed class HostRunner(HostDependencies? dependencies = null)
 {
     private readonly HostDependencies dependencies = dependencies ?? new();
 
     /// <summary>Executes a host command with location-only validation errors and bounded runtime shutdown.</summary>
-    /// <param name="args">No arguments or run, validate, validate-packages with a directory, or probe with ready/live.</param>
+    /// <param name="args">No arguments or run, validate, or validate-packages with a directory.</param>
     /// <param name="ct">Requests command cancellation or graceful runtime shutdown.</param>
-    /// <returns>Zero for success; one for invalid arguments, failed validation, failed probes or host failure.</returns>
+    /// <returns>Zero for success; one for invalid arguments, failed validation or host failure.</returns>
     public async Task<int> RunAsync(string[] args, CancellationToken ct)
     {
-        if (args.Length == 2 && args[0] == "probe")
-            return await new ProbeCommand(dependencies.ProbePort).ExecuteAsync(args[1], ct).ConfigureAwait(false);
         if (args is ["validate-packages", var directory]) return ValidatePackages(directory);
         if (args.Length > 1 || (args.Length == 1 && args[0] is not ("run" or "validate"))) return 1;
         if (args is ["validate"]) return Validate();

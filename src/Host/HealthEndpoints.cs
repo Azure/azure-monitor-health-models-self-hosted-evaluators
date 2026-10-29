@@ -44,7 +44,7 @@ internal sealed class HealthEndpoints(RuntimeHealth health, ILoggerFactory logs,
         builder.Logging.ClearProviders();
         builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = Timeout.InfiniteTimeSpan);
         builder.Services.AddSingleton(logs);
-        builder.WebHost.ConfigureKestrel(options => options.Listen(IPAddress.Loopback, dependencies.ProbePort));
+        builder.WebHost.ConfigureKestrel(options => options.Listen(IPAddress.Any, dependencies.ProbePort));
         app = builder.Build();
         app.MapGet("/healthz/ready", (HttpContext context) =>
             context.Response.StatusCode = health.Ready ? 200 : 503);

@@ -58,7 +58,7 @@ The Self-Hosted Evaluator is a single .NET 10 container that runs in Azure Conta
 | --- | --- |
 | `src/Plugins.Abstractions` | The public plugin contract, versioned with SemVer. Besides `Microsoft.Extensions.*.Abstractions`, it is the only assembly plugin authors reference. |
 | `src/Core` | Config store, plugin manager, scheduler, poll executor, evaluator, report builder, publisher, auth and secrets |
-| `src/Host` | Generic Host with DI and OpenTelemetry. Serves probes on loopback port 8080; `probe live` and `probe ready` commands query them for ACI exec probes. Provides `validate` and local execution using the same environment contract. |
+| `src/Host` | Generic Host with DI and OpenTelemetry. Serves probes on port 8080 for ACI HTTP probes. Provides `validate` and local execution using the same environment contract. |
 | `src/Plugins.Datadog` | Datadog package |
 | `src/Plugins.SplunkObservability` | Splunk Observability Cloud package |
 | `src/Plugins.Static` | Deterministic fake package for tests and demos |
@@ -523,7 +523,7 @@ No storage module, storage role assignment, storage private endpoint, Azure File
 - Configurable `cpu` and `memoryInGB` parameters, default `1` vCPU and `2` GiB. No autoscaling or replica setting.
 - The container group attaches the UAMI. `imageRegistryCredentials` uses its resource ID and the ACR login server, not registry passwords. Deployment waits for AcrPull propagation before provisioning ACI.
 - The image reference is pinned to `sha256`; no mutable `latest` tag is used for deployment.
-- No public IP, DNS label, inbound application port or public probe endpoint. Probes bind to `127.0.0.1:8080`; ACI exec commands run the host's `probe ready` and `probe live` subcommands. No shell or curl is required in the chiseled image.
+- No public IP, DNS label, inbound application port or public probe endpoint. Probes bind to `0.0.0.0:8080` and are used by ACI `httpGet` probes; the port is not published. No shell or curl is required in the chiseled image.
 - ACI supports readiness and liveness probes, not the former startup-probe setting. Configure a liveness initial delay (default `60s`) and probe thresholds through Bicep. Readiness alone does not stop the outbound worker; the host gates scheduling on successful initialization.
 - Set the environment variables in §6.1, including Bicep-generated `AZURE_CLIENT_ID` and `APPLICATIONINSIGHTS_CONNECTION_STRING`. Never configure a storage URL or storage key.
 - No persistent volume. Package contents come from the image and report queues remain in memory.
@@ -615,9 +615,9 @@ All metrics use the meter `SelfHostedEvaluators`. Tags are limited to `model`, `
 
 ### 10.4 Probes
 
-These are served on `127.0.0.1:8080`, not exposed on an ACI public or private endpoint. ACI invokes `Host probe ready` and `Host probe live`, which make loopback HTTP requests and return zero on success or nonzero on failure. Probe commands never start the worker or load sink credentials.
+These are served on `0.0.0.0:8080`, not exposed on an ACI public or private endpoint. ACI issues `httpGet` probes against them. There is no probe CLI command. The endpoints never start the worker or load sink credentials.
 
-- `/healthz/ready`, used by the readiness exec probe:
+- `/healthz/ready`, used by the readiness HTTP probe:
   - Passes after packages, the complete valid environment snapshot, and required sink clients have initialized.
   - Fails during shutdown.
 - `/healthz/live`: fails if initialization or the scheduler heartbeat stalls beyond its allowed window, which causes ACI to restart the process under `Always`.
@@ -666,7 +666,7 @@ There is no separate integration-test project. The `Core.Tests` and `Host.Tests`
 
 - 429 and 503 handling (`PublisherTests`, `PollExecutorTests`).
 - Dependency conflicts between packages loaded in separate `AssemblyLoadContext`s, and rejection of a package built against an unsupported major version of the abstractions (`PluginManagerTests`, `PackageCatalogTests`).
-- Loopback health endpoints and exec probe exit codes, without curl or a shell (`ProbeCommandTests`).
+- Health endpoint responses over loopback HTTP, without curl or a shell (`StartupTests`, `ShutdownTests`).
 - Secret-cache refresh after Key Vault rotation (`SecretResolverTests`).
 - Graceful shutdown on cancellation (`ShutdownTests`).
 
@@ -676,7 +676,7 @@ There is no separate integration-test project. The `Core.Tests` and `Host.Tests`
 
 - `scripts\test.ps1` runs `bicep build` and `bicep build-params` for `infra\main.bicep` and `main.bicepparam`, failing on compiler warnings.
 - PSScriptAnalyzer on all scripts.
-- There are no automated template assertions, network-mode checks or script behavior tests. The what-if run in `deploy.ps1` and the manual end-to-end test below cover the ACI resource type, `Always`, attached UAMI and identity-based image pull, environment entries, exec probes, no public ports, no storage-account resources or volumes, all three network modes, validate-first updates, and explicit confirmation before destructive group recreation.
+- There are no automated template assertions, network-mode checks or script behavior tests. The what-if run in `deploy.ps1` and the manual end-to-end test below cover the ACI resource type, `Always`, attached UAMI and identity-based image pull, environment entries, HTTP probes, no public ports, no storage-account resources or volumes, all three network modes, validate-first updates, and explicit confirmation before destructive group recreation.
 
 **Manual end-to-end test**
 

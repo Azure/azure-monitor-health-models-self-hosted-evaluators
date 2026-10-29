@@ -10,21 +10,6 @@ namespace Checkout.Demo.Tests;
 [Parallelizable(ParallelScope.All)]
 public class CommandTests
 {
-    [Test]
-    public async Task ProbePrintsReadinessMarkerOnlyAfterSuccessfulLocalHttp()
-    {
-        await using var api = await ApiFixture.StartAsync();
-        await using var command = new RunningDemo(["probe"], Endpoint(api.Client.BaseAddress!));
-        var result = await command.FinishAsync();
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.Code, Is.Zero, result.Output);
-            Assert.That(result.Output.Trim(), Is.EqualTo("DEMO_READY"));
-        });
-        var metrics = await api.MetricsAsync();
-        Assert.That(ApiFixture.Sample(metrics, "checkout_last_request_timestamp_seconds"), Is.Zero);
-    }
-
     [TestCase("healthy", HttpStatusCode.OK)]
     [TestCase("slow", HttpStatusCode.OK)]
     [TestCase("very-slow", HttpStatusCode.OK)]
@@ -43,11 +28,9 @@ public class CommandTests
         });
     }
 
-    [TestCase("probe", 500)]
-    [TestCase("probe", 302)]
-    [TestCase("fault", 500)]
-    [TestCase("fault", 302)]
-    public async Task UnsuccessfulOrRedirectingHttpNeverPrintsSuccess(string commandName, int status)
+    [TestCase(500)]
+    [TestCase(302)]
+    public async Task UnsuccessfulOrRedirectingHttpNeverPrintsSuccess(int status)
     {
         var calls = 0;
         await using var server = await HttpStub.StartAsync(context =>
@@ -57,20 +40,18 @@ public class CommandTests
             context.Response.Headers.Location = "/redirected";
             return Task.CompletedTask;
         });
-        string[] args = commandName == "fault" ? ["fault", "healthy"] : ["probe"];
-        await using var command = new RunningDemo(args, Endpoint(server.Address));
+        await using var command = new RunningDemo(["fault", "healthy"], Endpoint(server.Address));
         var result = await command.FinishAsync();
         Assert.Multiple(() =>
         {
             Assert.That(result.Code, Is.Not.Zero);
-            Assert.That(result.Output, Does.Not.Contain("DEMO_READY").And.Not.Contain("DEMO_FAULT:"));
+            Assert.That(result.Output, Does.Not.Contain("DEMO_FAULT:"));
             Assert.That(calls, Is.EqualTo(1), "Internal commands must not follow HTTP redirects.");
         });
     }
 
-    [TestCase("probe")]
-    [TestCase("fault")]
-    public async Task UnresponsiveInternalHttpIsBoundedAndFailsClosed(string commandName)
+    [Test]
+    public async Task UnresponsiveInternalHttpIsBoundedAndFailsClosed()
     {
         var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var server = await HttpStub.StartAsync(async context =>
@@ -78,42 +59,39 @@ public class CommandTests
             received.TrySetResult();
             await Task.Delay(TimeSpan.FromSeconds(30), context.RequestAborted);
         });
-        string[] args = commandName == "fault" ? ["fault", "healthy"] : ["probe"];
         var elapsed = Stopwatch.StartNew();
-        await using var command = new RunningDemo(args, Endpoint(server.Address));
+        await using var command = new RunningDemo(["fault", "healthy"], Endpoint(server.Address));
         await received.Task.WaitAsync(TimeSpan.FromSeconds(5));
         var result = await command.FinishAsync();
         Assert.Multiple(() =>
         {
             Assert.That(result.Code, Is.Not.Zero);
-            Assert.That(result.Output, Does.Not.Contain("DEMO_READY").And.Not.Contain("DEMO_FAULT:"));
+            Assert.That(result.Output, Does.Not.Contain("DEMO_FAULT:"));
             Assert.That(elapsed.Elapsed, Is.LessThan(TimeSpan.FromSeconds(8)));
         });
     }
 
-    [TestCase("probe")]
-    [TestCase("fault")]
-    public async Task RefusedConnectionFailsWithoutSuccessMarker(string commandName)
+    [Test]
+    public async Task RefusedConnectionFailsWithoutSuccessMarker()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
-        string[] args = commandName == "fault" ? ["fault", "healthy"] : ["probe"];
-        await using var command = new RunningDemo(args, Endpoint(new Uri($"http://127.0.0.1:{port}")));
+        await using var command = new RunningDemo(["fault", "healthy"], Endpoint(new Uri($"http://127.0.0.1:{port}")));
         var result = await command.FinishAsync();
         Assert.Multiple(() =>
         {
             Assert.That(result.Code, Is.Not.Zero);
-            Assert.That(result.Output, Does.Not.Contain("DEMO_READY").And.Not.Contain("DEMO_FAULT:"));
+            Assert.That(result.Output, Does.Not.Contain("DEMO_FAULT:"));
         });
     }
 
     [TestCase("unknown")]
+    [TestCase("probe")]
     [TestCase("fault")]
     [TestCase("fault", "UNKNOWN")]
     [TestCase("fault", "healthy", "extra")]
-    [TestCase("probe", "extra")]
     [TestCase("traffic", "extra")]
     public async Task InvalidCommandsExitWithoutCallingHttp(params string[] args)
     {
@@ -128,7 +106,7 @@ public class CommandTests
         Assert.Multiple(() =>
         {
             Assert.That(result.Code, Is.Not.Zero);
-            Assert.That(result.Output, Does.Not.Contain("DEMO_READY").And.Not.Contain("DEMO_FAULT:"));
+            Assert.That(result.Output, Does.Not.Contain("DEMO_FAULT:"));
             Assert.That(calls, Is.Zero);
         });
     }

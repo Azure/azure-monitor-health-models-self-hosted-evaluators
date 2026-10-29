@@ -241,10 +241,12 @@ The workflow is:
 9. Deploy the complete group, retrying only recognized image-pull failures
    within the RBAC budget, including rejection before the resource exists.
    Failed ARM provisioning is an error even if a CLI command exits zero.
-10. Inspect lifecycle/provisioning state and execute the actual ready probe in
-    the running container. Only its fixed success marker proves readiness;
-    Azure CLI's exec exit code alone is insufficient. Raw lifecycle messages
-    are not logged because they can contain sensitive application output.
+10. Poll ARM and the container's instance view until provisioning has Succeeded
+    and the evaluator is Running. Any restart fails the deployment. Transient
+    `Readiness|Liveness probe failed:` events are tolerated while the container
+    is Running with zero restarts. No in-container probe is executed. Raw
+    lifecycle messages are not logged because they can contain sensitive
+    application output.
 
 Configuration rejection occurs before existing-group update/deletion, including
 when `-ConfirmRecreate` was requested. Prerequisite changes and a newly pushed
@@ -259,7 +261,7 @@ separately if an operator needs to review resource-ID-only changes before
 approving the workflow; never publish property-level configuration diffs.
 
 Native tools have an owned-process-tree deadline (900 seconds by default);
-state/role inspections use 60 seconds and readiness exec uses 30 seconds.
+state/role inspections use 60 seconds.
 Defaults are six RBAC/pull attempts, thirty readiness attempts and a fifteen
 second retry delay. `-RbacAttempts`, `-ReadinessAttempts` and
 `-RetryDelaySeconds` are bounded knobs, not unbounded polling. Failures report
@@ -366,18 +368,17 @@ individual resource bodies below ARM's 1 MiB resource limit. These safeguards
 are not a statement that ACI accepts all combinations of CPU/memory or every
 host environment size. ARM remains authoritative for regional compute limits.
 
-Both probes execute:
+Both probes are ACI `httpGet` probes against container port 8080:
 
 ```text
-/usr/share/dotnet/dotnet /app/host/SelfHostedEvaluators.Host.dll probe ready
-/usr/share/dotnet/dotnet /app/host/SelfHostedEvaluators.Host.dll probe live
+readiness: GET http://:8080/healthz/ready
+liveness:  GET http://:8080/healthz/live
 ```
 
-They use only bounded IPv4 loopback HTTP, not shell/curl. Probe defaults are
+Probe defaults are
 readiness delay 5s, liveness delay 60s, period 10s, timeout 5s and failure
 threshold 3. CPU/memory, delays, period, timeout, threshold and optional zone
-are parameters. Timeout cannot be below 3s because the host request itself has
-a 2s bound. No unsupported startup probe or configurable ACI termination-grace
+are parameters. Timeout cannot be below 3s. No unsupported startup probe or configurable ACI termination-grace
 claim is made. See [host runtime](host-runtime.md) for best-effort shutdown.
 
 Rollback is a new deployment of the previous **registry manifest digest plus
@@ -425,7 +426,7 @@ PSScriptAnalyzer 1.24.0+ on `PSModulePath`; it never installs tools and rejects
 missing/empty/skipped/failing TRX evidence. There is no CI/CD in this task.
 
 The separate `scripts\test-container.ps1` gate has passed with the actual
-Linux/amd64 Dockerfile: selected-package builds, startup/exec probes, local fake
+Linux/amd64 Dockerfile: selected-package builds, startup/HTTP probes, local fake
 identity/vendor/model reporting, configuration/image replacement, rollback,
 active-SSE SIGTERM and explicit local restart. It creates only task-owned local
 Docker resources and does not execute Azure commands. See

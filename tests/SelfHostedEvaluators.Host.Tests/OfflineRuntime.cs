@@ -48,8 +48,22 @@ internal sealed class OfflineRuntime : IDisposable
     public static async Task Ready()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        while (await new ProbeCommand().ExecuteAsync("ready", timeout.Token) != 0)
+        while (await Probe("ready", timeout.Token) != 0)
             await Task.Delay(5, timeout.Token);
+    }
+
+    /// <summary>Requests a health endpoint over loopback HTTP; returns zero only for HTTP 200.</summary>
+    public static async Task<int> Probe(string kind, CancellationToken ct = default)
+    {
+        using var handler = new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false, UseProxy = false };
+        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
+        try
+        {
+            using var response = await http.GetAsync($"http://127.0.0.1:8080/healthz/{kind}",
+                HttpCompletionOption.ResponseHeadersRead, ct);
+            return response.StatusCode == HttpStatusCode.OK ? 0 : 1;
+        }
+        catch (Exception error) when (error is HttpRequestException or OperationCanceledException) { return 1; }
     }
 
     private sealed class RejectSecrets : IKeyVaultSource

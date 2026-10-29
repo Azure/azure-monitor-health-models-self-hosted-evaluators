@@ -78,8 +78,10 @@ var groupProperties = {
           }
         }
         readinessProbe: {
-          exec: {
-            command: ['/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'ready']
+          httpGet: {
+            path: '/healthz/ready'
+            port: 8080
+            scheme: 'http'
           }
           initialDelaySeconds: readinessInitialDelaySeconds
           periodSeconds: probePeriodSeconds
@@ -88,8 +90,10 @@ var groupProperties = {
           successThreshold: 1
         }
         livenessProbe: {
-          exec: {
-            command: ['/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'live']
+          httpGet: {
+            path: '/healthz/live'
+            port: 8080
+            scheme: 'http'
           }
           initialDelaySeconds: livenessInitialDelaySeconds
           periodSeconds: probePeriodSeconds

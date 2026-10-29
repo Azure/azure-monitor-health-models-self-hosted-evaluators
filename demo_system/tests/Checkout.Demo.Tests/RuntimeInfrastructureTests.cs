@@ -124,7 +124,7 @@ public sealed class RuntimeInfrastructureTests
     {
         var snapshot = Snapshot("main");
         var resources = snapshot.GetProperty("predictedResources").EnumerateArray().ToArray();
-        Assert.That(resources, Has.Length.EqualTo(13));
+        Assert.That(resources, Has.Length.EqualTo(14));
         foreach (var resource in resources)
             Assert.That(resource.GetProperty("id").GetString(),
                 Does.StartWith("/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/checkout-test-rg/providers/"));

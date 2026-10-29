@@ -72,8 +72,7 @@ Run [deploy.ps1](../scripts/deploy.ps1) from the repository root. Start with the
 | `-WhatIf` | Local input preview only; no Azure, Docker, Bicep execution, network requests, or artifact writes |
 
 A real run creates billable resources, builds and pushes a Linux image, pins its
-registry manifest digest, and waits for all three containers and the internal
-readiness marker. It does not configure or deploy an evaluator.
+registry manifest digest, and waits for all three containers to be Running with no restarts. It does not configure or deploy an evaluator.
 
 ### Alternate NuGet feed
 
@@ -132,11 +131,10 @@ starts healthy after every restart; modes do not cycle automatically.
 See [expected responses and health behavior](reference.md#signals-and-expected-behavior).
 
 The script uses private ACI exec in `checkout-api` and requires the exact output
-line `DEMO_FAULT:<mode>`. Control and readiness use single shell wrappers under
+line `DEMO_FAULT:<mode>`. The control wrapper lives under
 `/app/control`, with no ACI exec arguments. The wrappers are packaged in the
 non-chiseled `10.0-noble` image, running as nonroot UID 1654. The application's
-native CLI also supports `dotnet Checkout.Demo.dll fault errors` and
-`dotnet Checkout.Demo.dll probe`. No public control endpoint is exposed.
+native CLI also supports `dotnet Checkout.Demo.dll fault errors`. No public control endpoint is exposed.
 
 ## Teardown
 

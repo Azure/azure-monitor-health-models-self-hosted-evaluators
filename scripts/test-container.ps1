@@ -45,6 +45,16 @@ function ConvertTo-ContainerSignal([string] $Name, [string] $Plugin, [hashtable]
     else { @{ unhealthy = @{ operator = 'GreaterThan'; threshold = 10 } } }
     return @{ entity = 'fixture-entity'; name = $Name; plugin = $Plugin; query = $Query; evaluation = $evaluation; interval = $Interval }
 }
+function Get-ContainerHealth([string] $Id, [string] $Kind) {
+    # The published host port is reassigned when a container restarts, so resolve it on every call.
+    try {
+        $mapping = (Invoke-ContainerDocker @('port', $Id, '8080/tcp')) -split '\r?\n' | Select-Object -First 1
+        $port = ($mapping -split ':')[-1]
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/healthz/$Kind" -TimeoutSec 3 -SkipHttpErrorCheck -NoProxy
+        return $response.StatusCode -eq 200
+    }
+    catch { return $false }
+}
 function Start-ContainerWorker {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Starts only uniquely named test-owned containers and always removes them in finally.')]
     param([string] $Image, [object[]] $Plugins, [object[]] $Models, [string] $Suffix, [string] $ShutdownTimeout = '2s')
@@ -52,7 +62,7 @@ function Start-ContainerWorker {
     $file = Join-Path $ResultsDirectory ($Suffix + '.env')
     [IO.File]::WriteAllLines($file, @($environment.GetEnumerator() | ForEach-Object { $_.Key + '=' + $_.Value }))
     $id = Invoke-ContainerDocker @('create', '--name', "$runId-$Suffix", '--label', "she.acceptance=$runId",
-        '--network', $network, '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
+        '--network', $network, '--publish', '127.0.0.1::8080', '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
         '--mount', "type=bind,source=$trust,target=/test-trust,readonly",
         '--env', 'SSL_CERT_FILE=/test-trust/ca.pem', '--env', 'IDENTITY_ENDPOINT=http://fixtures:8081/identity',
         '--env', 'IDENTITY_HEADER=container-fixture-only', '--env-file', $file, $Image)
@@ -60,8 +70,7 @@ function Start-ContainerWorker {
     $null = Invoke-ContainerDocker @('start', $id)
     Wait-ContainerCondition {
         try {
-            $marker = Invoke-ContainerDocker @('exec', $id, '/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'ready')
-            return $marker -ceq 'Evaluator probe ready succeeded.'
+            return Get-ContainerHealth $id 'ready'
         }
         catch {
             $state = Invoke-ContainerDocker @('inspect', $id, '--format', '{{.State.Running}}')
@@ -78,7 +87,7 @@ function Stop-ContainerWorker {
     $null = Invoke-ContainerDocker @('kill', '--signal', 'TERM', $Id)
     $notReady = $false
     try {
-        $notReady = (Invoke-ContainerDocker @('exec', $Id, '/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'ready')) -cne 'Evaluator probe ready succeeded.'
+        $notReady = -not (Get-ContainerHealth $Id 'ready')
     }
     catch { $notReady = $true }
     Assert-ContainerCheck $notReady 'readiness fails once SIGTERM starts'
@@ -160,7 +169,7 @@ try {
         finally { $certificate.Dispose() }
     }
     finally { $key.Dispose() }
-    $network = Invoke-ContainerDocker @('network', 'create', '--internal', '--label', "she.acceptance=$runId", $runId)
+    $network = Invoke-ContainerDocker @('network', 'create', '--label', "she.acceptance=$runId", $runId)
     $fixture = Invoke-ContainerDocker @('create', '--name', "$runId-fixtures", '--label', "she.acceptance=$runId",
         '--network', $network, '--network-alias', 'fixtures', '--read-only',
         '--mount', "type=bind,source=$publish,target=/fixtures,readonly", '--mount', "type=bind,source=$trust,target=/test-trust,readonly",
@@ -201,8 +210,8 @@ try {
 
     $phase = 'real production image pipeline'
     $worker = Start-ContainerWorker $image $plugins $models 'baseline'
-    $live = Invoke-ContainerDocker @('exec', $worker, '/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'live')
-    Assert-ContainerCheck ($live -ceq 'Evaluator probe live succeeded.') 'real liveness exec probe'
+    $live = Get-ContainerHealth $worker 'live'
+    Assert-ContainerCheck $live 'real HTTP liveness probe'
     Wait-ContainerCondition {
         @((Get-ContainerSnapshot).reports | Where-Object status -EQ 202 |
             ForEach-Object { ($_.body | ConvertFrom-Json).signalName } | Select-Object -Unique).Count -eq 7
@@ -266,20 +275,17 @@ try {
     Wait-ContainerCondition { (Invoke-ContainerDocker @('inspect', $worker, '--format', '{{.State.Running}}')) -eq 'false' }
     Assert-ContainerCheck ((Invoke-ContainerDocker @('inspect', $worker, '--format', '{{.State.ExitCode}}')) -eq '137') 'forced SIGKILL is distinguishable from graceful shutdown'
     $worker = Start-ContainerWorker $image $plugins $replacement 'after-kill'
-    Assert-ContainerCheck ((Invoke-ContainerDocker @('exec', $worker, '/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'ready')) -ceq 'Evaluator probe ready succeeded.') 'fresh worker starts after forced termination'
+    Assert-ContainerCheck (Get-ContainerHealth $worker 'ready') 'fresh worker starts after forced termination'
     $phase = 'local probe-failure and explicit restart'
     $beforeStart = Invoke-ContainerDocker @('inspect', $worker, '--format', '{{.State.StartedAt}}')
     $null = Invoke-ContainerDocker @('kill', '--signal', 'STOP', $worker)
     try {
-        $liveFailed = $false
-        try { $null = Invoke-ContainerDocker @('exec', $worker, '/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'live') }
-        catch { $liveFailed = $true }
-        Assert-ContainerCheck $liveFailed 'actual loopback liveness probe fails when PID 1 is stalled'
+        Assert-ContainerCheck (-not (Get-ContainerHealth $worker 'live')) 'HTTP liveness probe fails when PID 1 is stalled'
     }
     finally { $null = Invoke-ContainerDocker @('kill', '--signal', 'CONT', $worker) }
     $null = Invoke-ContainerDocker @('restart', '--timeout', '8', $worker)
     Wait-ContainerCondition {
-        try { return (Invoke-ContainerDocker @('exec', $worker, '/usr/share/dotnet/dotnet', '/app/host/SelfHostedEvaluators.Host.dll', 'probe', 'ready')) -ceq 'Evaluator probe ready succeeded.' }
+        try { return Get-ContainerHealth $worker 'ready' }
         catch { return $false }
     }
     Assert-ContainerCheck ((Invoke-ContainerDocker @('inspect', $worker, '--format', '{{.State.StartedAt}}')) -cne $beforeStart -and

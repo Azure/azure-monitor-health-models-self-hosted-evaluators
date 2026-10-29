@@ -167,7 +167,7 @@ public class StartupTests
         }
         finally { stop.Cancel(); await run.WaitAsync(TimeSpan.FromSeconds(5)); }
         Assert.That(await run, Is.Zero);
-        Assert.That(await new ProbeCommand().ExecuteAsync("ready", CancellationToken.None), Is.Not.Zero);
+        Assert.That(await OfflineRuntime.Probe("ready"), Is.Not.Zero);
     }
 
     [Test]
@@ -190,7 +190,7 @@ public class StartupTests
                 Assert.That(offline.Logs.Entries.Where(e => e.Message.Contains("Remote model/entity check warning", StringComparison.Ordinal))
                     .All(e => e.Level == Microsoft.Extensions.Logging.LogLevel.Warning), Is.True);
             });
-            Assert.That(await new ProbeCommand().ExecuteAsync("ready", CancellationToken.None), Is.Zero);
+            Assert.That(await OfflineRuntime.Probe("ready"), Is.Zero);
         }
         finally { stop.Cancel(); await run.WaitAsync(TimeSpan.FromSeconds(5)); }
     }
@@ -219,7 +219,7 @@ public class StartupTests
             {
                 Assert.That(System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
                     .GetActiveTcpListeners().Where(e => e.Port == 8080).Select(e => e.Address),
-                    Is.EqualTo(new[] { System.Net.IPAddress.Loopback }));
+                    Is.EqualTo(new[] { System.Net.IPAddress.Any }));
                 Assert.That(offline.Credentials.Constructions, Is.Zero);
                 Assert.That(offline.Transport.Requests.All(r => r.Authorization == "Bearer local-custom-auth"), Is.True);
                 var created = offline.Logs.Entries.Where(e => e.Message.StartsWith("Fixture client created", StringComparison.Ordinal)).ToArray();

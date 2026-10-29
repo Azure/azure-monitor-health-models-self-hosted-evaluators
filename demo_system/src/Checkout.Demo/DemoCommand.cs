@@ -13,11 +13,10 @@ public static class DemoCommand
             return 0;
         }
         var traffic = args is ["traffic"];
-        var probe = args is ["probe"];
         var fault = args is ["fault", "healthy" or "slow" or "very-slow" or "errors"];
-        if (!traffic && !probe && !fault)
+        if (!traffic && !fault)
         {
-            Console.Error.WriteLine("Usage: Checkout.Demo.dll [api|traffic|probe|fault healthy|slow|very-slow|errors]");
+            Console.Error.WriteLine("Usage: Checkout.Demo.dll [api|traffic|fault healthy|slow|very-slow|errors]");
             return 2;
         }
 
@@ -46,15 +45,13 @@ public static class DemoCommand
 
         try
         {
-            using var request = probe
-                ? new HttpRequestMessage(HttpMethod.Get, "/healthz")
-                : new HttpRequestMessage(HttpMethod.Post, "/admin/fault")
-                {
-                    Content = JsonContent.Create(new { mode = args[1] })
-                };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/admin/fault")
+            {
+                Content = JsonContent.Create(new { mode = args[1] })
+            };
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
-            Console.WriteLine(probe ? "DEMO_READY" : $"DEMO_FAULT:{args[1]}");
+            Console.WriteLine($"DEMO_FAULT:{args[1]}");
             return 0;
         }
         catch (HttpRequestException exception)

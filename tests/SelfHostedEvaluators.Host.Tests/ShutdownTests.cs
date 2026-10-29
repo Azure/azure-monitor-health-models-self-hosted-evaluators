@@ -99,7 +99,7 @@ public class ShutdownTests
         try
         {
             await vault.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.That(await new ProbeCommand().ExecuteAsync("ready", CancellationToken.None), Is.EqualTo(1));
+            Assert.That(await OfflineRuntime.Probe("ready"), Is.EqualTo(1));
             var clock = Stopwatch.StartNew();
             stop.Cancel();
             Assert.That(await run.WaitAsync(TimeSpan.FromSeconds(4)), Is.Zero);
@@ -141,7 +141,7 @@ public class ShutdownTests
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.That(await new ProbeCommand().ExecuteAsync("ready", CancellationToken.None), Is.Zero);
+            Assert.That(await OfflineRuntime.Probe("ready"), Is.Zero);
             stop.Cancel();
             Assert.That(await run.WaitAsync(TimeSpan.FromSeconds(3)), Is.Zero);
             Assert.That(offline.Transport.Disposals, Is.Zero, "Actual blocked requests still own the model context.");

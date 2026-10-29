@@ -6,7 +6,6 @@
 !src/Checkout.Demo/*.csproj
 !src/Checkout.Demo/*.cs
 !container/
-!container/probe.sh
 !container/fault-healthy.sh
 !container/fault-slow.sh
 !container/fault-very-slow.sh
