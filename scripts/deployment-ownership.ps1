@@ -8,7 +8,6 @@ $script:EvaluatorResourceApis = @{
     'Microsoft.ManagedIdentity/userAssignedIdentities' = '2023-01-31'
     'Microsoft.OperationalInsights/workspaces' = '2023-09-01'
     'Microsoft.Insights/components' = '2020-02-02'
-    'Microsoft.Insights/scheduledQueryRules' = '2023-12-01'
     'Microsoft.KeyVault/vaults' = '2023-07-01'
     'Microsoft.Network/publicIPAddresses' = '2024-05-01'
     'Microsoft.Network/natGateways' = '2024-05-01'
@@ -336,7 +335,6 @@ function Add-EvaluatorDeploymentPlan {
     }
     $modules = @('identity', 'registry', 'monitoring', 'keyvault')
     if ($Desired.networkMode -cne 'public') { $modules += 'networking' }
-    if ($Desired.actionGroupId) { $modules += 'alerts' }
     if ($Desired.deployContainerGroup) { $modules += 'container-group' }
     $deploymentIds = @("/subscriptions/$($Manifest.subscriptionId)/providers/Microsoft.Resources/deployments/$($Desired.namePrefix)-$Phase")
     $deploymentIds += @($modules | ForEach-Object { "$group/providers/Microsoft.Resources/deployments/$($Desired.namePrefix)-$_" })
@@ -358,7 +356,6 @@ function Add-EvaluatorDeploymentPlan {
         'Microsoft.Authorization/roleAssignments' = 4 + $Desired.adminPrincipalIds.Count + $Desired.healthModelResourceIds.Count
     }
     if ($Desired.deployContainerGroup) { $minimumCounts['Microsoft.ContainerInstance/containerGroups'] = 1 }
-    if ($Desired.actionGroupId) { $minimumCounts['Microsoft.Insights/scheduledQueryRules'] = 2 }
     if ($Desired.networkMode -cne 'public') {
         foreach ($type in @('Microsoft.Network/virtualNetworks', 'Microsoft.Network/natGateways', 'Microsoft.Network/publicIPAddresses')) {
             $minimumCounts[$type] = 1

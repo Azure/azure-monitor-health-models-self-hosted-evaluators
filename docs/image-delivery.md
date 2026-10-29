@@ -349,4 +349,4 @@ successfully in a network-disabled Linux SDK
 container, without a developer HTTPS certificate. The plugin test helpers generate
 and pin a per-fixture certificate instead of depending on machine-wide trust.
 Neither gate proves registry push, managed-identity image pull, cloud routing,
-live TTL/recalculation, telemetry ingestion or alert delivery.
+live TTL/recalculation or telemetry ingestion.

@@ -174,10 +174,6 @@ try {
         if ($key -isnot [string] -or $key.Length -lt 1 -or $key.Length -gt 512 -or $desired.tags[$key] -isnot [string] -or $desired.tags[$key].Length -gt 256 -or
             $key -iin @('she-network-mode', 'she-owner')) { throw 'Invalid resource tags.' }
     }
-    if ($desired.actionGroupId -isnot [string] -or ($desired.actionGroupId -and $desired.actionGroupId -inotmatch
-            '^/subscriptions/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}/resourceGroups/[a-z0-9_.()-]{1,90}/providers/Microsoft\.Insights/actionGroups/[^/]{1,260}\z')) {
-        throw 'Invalid action group resource ID.'
-    }
     $modelIds = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($id in $desired.healthModelResourceIds) {
         if ($id -isnot [string] -or $id -inotmatch '^/subscriptions/[a-f0-9-]{36}/resourceGroups/[a-z0-9_.()-]{1,90}/providers/Microsoft\.CloudHealth/healthmodels/[a-zA-Z][a-zA-Z0-9-]{1,42}[a-zA-Z0-9]\z' -or

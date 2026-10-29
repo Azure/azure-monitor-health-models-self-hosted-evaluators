@@ -145,7 +145,7 @@ Use the authorized readback/runbook in [deployment](deployment.md#authorized-rea
 to check actual model signals after a rollout. A 202 only confirms asynchronous
 acceptance, not model recalculation. Monitor publish gaps, errors, budget waits,
 superseded/expired/shutdown drops, auth failures, starts and state changes together.
-No built-in alert tracks every configured signal, resolves a stuck external
+No built-in monitoring tracks every configured signal, resolves a stuck external
 credential, guarantees diagnostic export at forced stop, or prevents duplicate
 workers from competing for the same signal names.
 

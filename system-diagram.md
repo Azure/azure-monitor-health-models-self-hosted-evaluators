@@ -58,7 +58,7 @@ flowchart TB
             rb["Report Builder"]
             pub["Publisher"]
         end
-        mon["Application Insights<br/>and Log Analytics<br/>OpenTelemetry, optional alerts"]
+        mon["Application Insights<br/>and Log Analytics<br/>OpenTelemetry"]
         net["Networking, optional<br/>ACI delegated subnet and NAT<br/>private: separate endpoints<br/>for Key Vault and ACR"]
     end
 

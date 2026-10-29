@@ -386,26 +386,6 @@ complete prior configuration**, using the same exact-image validation and
 compatibility gates. Retain those inputs in an approved non-secret release
 record. No report queue or in-memory progress survives replacement.
 
-## Optional operational alerts
-
-Set `actionGroupId` to an existing action group to create two workspace
-scheduled-query rules (5-minute evaluation, 15-minute window):
-
-- **Accepted report gap:** `AppMetrics`, `Name == "evaluator.publishes"`,
-  `Properties["status"] == "202"`, sum of `Sum` below one, including an empty
-  result set represented as zero.
-- **Restart loop:** `AppTraces`, structured
-  `Properties["Event"] == "evaluator.host.starts"`, count greater than three.
-
-Both filter `_ResourceId` to this Application Insights component. Queries
-match the actual structured Host start log and Publisher counter/status
-dimension, not unimplemented logs or guessed metric names. Workspace table
-availability, ingestion latency and real alert delivery require live
-verification. A long configured polling interval can legitimately trip the
-15-minute accepted-report gap; tune operational thresholds for that workload.
-Failed pre-telemetry configuration cannot emit a remote host-start event;
-the gap rule, not a fictional rejected-config event, detects missing reports.
-
 ## Local verification and remaining boundary
 
 ```powershell
@@ -434,7 +414,7 @@ Docker resources and does not execute Azure commands. See
 its command, offline-feed option and ARM64-emulation limitation.
 
 Live Azure schema/service acceptance, private routing/DNS, managed-identity
-image pull, RBAC propagation, rotation, telemetry queries and alert delivery
+image pull, RBAC propagation, rotation, telemetry queries
 remain unverified until an authorized deployment. Local explicit Docker restart
 does not establish ACI automatic probe/restart behavior.
 
@@ -714,8 +694,8 @@ secret policies to turn a failed check green.
 When acceptance fails, keep the bounded/sanitized phase and correlate protected
 deployment/ACI events, auth/rate-limit metrics, structured start logs and
 service request IDs through approved channels. Readiness does not prove accepted
-reports; a 202 does not prove recalculation; ingestion/telemetry delay can cause
-a gap alert. Removed signals can remain active until TTL, expired reports and
+reports; a 202 does not prove recalculation; ingestion/telemetry delay can hide
+a gap. Removed signals can remain active until TTL, expired reports and
 forced-stop queues are not replayed, and there is no automatic configuration/
 image rollback. Two workers writing the same key can overwrite each other;
 operate exactly one intended worker.
@@ -727,5 +707,4 @@ Official schema/behavior references:
 - [ACI VNet requirements](https://learn.microsoft.com/azure/container-instances/container-instances-vnet)
 - [ACI NAT Gateway](https://learn.microsoft.com/azure/container-instances/container-instances-nat-gateway)
 - [Private ACR endpoints](https://learn.microsoft.com/azure/container-registry/container-registry-private-link)
-- [Scheduled-query rule schema](https://learn.microsoft.com/azure/templates/microsoft.insights/2023-12-01/scheduledqueryrules)
 - [ARM template limits](https://learn.microsoft.com/azure/azure-resource-manager/templates/best-practices#template-limits)

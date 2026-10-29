@@ -57,7 +57,6 @@ param endpointSubnetPrefix string = '10.42.1.0/24'
 @minLength(1)
 param healthModelResourceIds string[]
 param adminPrincipalIds string[] = []
-param actionGroupId string = ''
 
 resource group 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
@@ -169,18 +168,6 @@ module containerGroup 'modules/container-group.bicep' = if (deployContainerGroup
     keyvault
     modelAccess
   ]
-}
-module alerts 'modules/alerts.bicep' = if (!empty(actionGroupId)) {
-  name: '${namePrefix}-alerts'
-  scope: group
-  params: {
-    namePrefix: namePrefix
-    location: location
-    tags: tags
-    workspaceId: monitoring.outputs.workspaceResourceId
-    applicationInsightsId: monitoring.outputs.applicationInsightsId
-    actionGroupId: actionGroupId
-  }
 }
 
 output containerGroupId string = resourceId(

@@ -95,10 +95,8 @@ code; there is no process sandbox.
 A permanently hung call cannot be killed in-process: its plugin entry remains
 blocked and resources remain owned until operator restart/redeployment terminates
 the process. No automatic restart or new liveness policy is implemented.
-The independent scheduler heartbeat stays live; accepted `Unknown` reports can
-keep the accepted-report-gap alert quiet. Operators should monitor
-`evaluator.poll.hangs` / `evaluator.poll.quarantines` and the Warning transitions;
-the shipped optional alerts cover accepted-report gaps and restart loops only.
+The independent scheduler heartbeat stays live. Operators should monitor
+`evaluator.poll.hangs` / `evaluator.poll.quarantines` and the Warning transitions.
 
 Shutdown composition:
 

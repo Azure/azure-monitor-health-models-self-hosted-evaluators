@@ -513,7 +513,6 @@ Example body for the `p95-latency` signal in §6.3. The TTL is 2 minutes × 3 = 
 | `networking` (optional) | VNet, ACI-delegated subnet, NAT Gateway and Standard public IP; separate private-endpoint subnet and DNS zones in `private` mode. |
 | `containerGroup` | `Microsoft.ContainerInstance/containerGroups@2025-09-01`, as described below. No managed environment, revisions or scaling rules. |
 | `health-model-access` | Assigns built-in Contributor (`b24988ac-6180-42a0-ab88-20f7382dd24c`) to the UAMI on one existing model, using the target model subscription's role definition. `main` loops over `healthModelResourceIds`. No custom role is created. |
-| `alerts` (optional) | Created only when `actionGroupId` is set (§10.5) |
 
 No storage module, storage role assignment, storage private endpoint, Azure Files volume, deployment script resource requiring storage, or config/package container output is defined.
 
@@ -534,7 +533,7 @@ No storage module, storage role assignment, storage private endpoint, Azure File
 - `pluginConfigurations` and `modelConfigurations` are arrays of `{ key, config }` objects. `key` is the environment suffix from §6.1; `config` is the JSON object in §6.2 or §6.3. Duplicate keys are rejected before deployment.
 - `hostSettings` supplies optional `SHE_` settings from §6.1. Generated identity/telemetry values and reserved configuration prefixes cannot be overridden through this map.
 - Keep all configuration values non-secret. Auth profiles contain Key Vault references; secrets are populated separately by admins and are never template outputs.
-- `imageDigest`, compute/probe settings, `networkMode`, `healthModelResourceIds`, `adminPrincipalIds` and optional `actionGroupId` complete the deployment inputs.
+- `imageDigest`, compute/probe settings, `networkMode`, `healthModelResourceIds` and `adminPrincipalIds` complete the deployment inputs.
 
 **The `networkMode` parameter**
 
@@ -598,7 +597,7 @@ All metrics use the meter `SelfHostedEvaluators`. Tags are limited to `model`, `
 | `evaluator.config.loads` and `evaluator.package.loads` | Config and package loads, by outcome |
 | `evaluator.checks.warnings` | Startup-check warnings (§7.5) |
 | `evaluator.signals.active` | Number of active signals, as a gauge |
-| `evaluator.host.starts` | Host process starts, as a counter; each start also emits a structured event for restart-loop alerts |
+| `evaluator.host.starts` | Host process starts, as a counter; each start also emits a structured event |
 
 ### 10.2 Traces
 
@@ -622,13 +621,6 @@ These are served on `0.0.0.0:8080`, not exposed on an ACI public or private endp
   - Fails during shutdown.
 - `/healthz/live`: fails if initialization or the scheduler heartbeat stalls beyond its allowed window, which causes ACI to restart the process under `Always`.
 - ACI has no separate startup probe in the selected API. The liveness initial delay/thresholds allow initialization to finish. Readiness does not schedule or suppress polls; the host controls that explicitly.
-
-### 10.5 Alerts (optional)
-
-These are created only when `actionGroupId` is set.
-
-- No `202` responses in the last 15 minutes. This covers an evaluator outage, which the model itself only shows later when signals expire (§12).
-- More than 3 `evaluator.host.starts` events in 15 minutes. This is an application restart-loop signal, not an unsupported ACI restart-count platform metric; repeated deliberate redeployments can also trigger it.
 
 ## 11. Testing
 
@@ -716,9 +708,9 @@ The container runs as one UAMI. Built-in role assignments are limited to their r
 1. **Package integrity relies on trusted builds and registry/deployment access.** Packages are not independently signed. Anyone allowed to supply a deployment image can execute code as the UAMI. Restrict ACR push and ACI deployment rights; deploy immutable digests.
 2. **Anyone who can change plugin environment configuration must be trusted just as much.** An entry can point at any host (unless the package sets `AllowedHosts`) and can use any secret the UAMI can read.
 3. **Plugins are not sandboxed.** They run in-process with the host's permissions. `AssemblyLoadContext` separates dependencies, not privileges.
-4. **An evaluator outage is not reported as `Unknown`.** If the evaluator stops, its signals keep their last state until their TTL expires and they are removed. The optional alerts in §10.5 cover this gap.
+4. **An evaluator outage is not reported as `Unknown`.** If the evaluator stops, its signals keep their last state until their TTL expires and they are removed.
 5. **`additionalContext` is readable** by anyone with read access to the health model. It is redacted, but sink error messages can still reveal some detail.
-6. **ACI updates interrupt reporting.** The single group restarts in place, with no rolling revisions. Pending reports are memory-only, and forced termination may bypass the best-effort flush. The model's TTL and optional telemetry alerts cover, but do not eliminate, the gap.
+6. **ACI updates interrupt reporting.** The single group restarts in place, with no rolling revisions. Pending reports are memory-only, and forced termination may bypass the best-effort flush. The model's TTL covers, but does not eliminate, the gap.
 7. **Environment configuration is bounded in size.** Per-entry variables reduce monolithic payloads but do not bypass ACI/ARM or process-environment limits. Validate realistic signal counts before deployment; oversized configurations fail explicitly rather than silently moving to storage.
 
 ## 13. References

@@ -9,23 +9,19 @@ Run the commands below from the repository root.
 
 ## 1. Get the model reporting URL
 
-Obtain the **real health-model data-plane root HTTPS URL and its matching model
-resource ID** from trusted model/service setup or the service owner. Confirm the
-resource ID matches `healthModelResourceId` in the demo manifest.
+Read the **health-model data-plane root HTTPS URL** from the model's ARM
+resource. Confirm the model resource ID matches `healthModelResourceId` in the
+demo manifest.
 
-The model ARM resource returns the read-only `properties.dataPlaneUri` only at
-api-version `2026-12-01-preview`. `2026-10-01-preview` and earlier do not expose
-it. Where the stamp serves that version (INT does), read it from the model:
+The read-only `properties.dataPlaneUri` is returned only by api-version
+`2026-12-01-preview`; earlier versions do not expose it:
 
 ```powershell
 az rest --method get --url "https://management.azure.com<healthModelResourceId>?api-version=2026-12-01-preview" --query properties.dataPlaneUri -o tsv
 ```
 
-Stamps that do not serve `2026-12-01-preview` (PPE and PROD were documented at
-`2026-09-01-preview`) return no value, so obtain it from the service owner there.
 Neither the demo manifest nor the generator discovers it, and the evaluator's
-data-plane `apiVersion` is an unrelated setting. Do not construct a hostname
-from the model name or ID or reuse the workspace endpoint.
+data-plane `apiVersion` is an unrelated setting.
 
 | Value | Purpose |
 | --- | --- |

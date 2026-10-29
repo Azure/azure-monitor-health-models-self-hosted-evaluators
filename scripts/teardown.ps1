@@ -55,7 +55,6 @@ try {
     }
     $priority = @{
         'Microsoft.ContainerInstance/containerGroups' = 0
-        'Microsoft.Insights/scheduledQueryRules' = 1
         'Microsoft.Authorization/roleAssignments' = 2
         'Microsoft.Network/privateEndpoints/privateDnsZoneGroups' = 3
         'Microsoft.Network/privateEndpoints' = 4
