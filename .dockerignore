@@ -1,0 +1,16 @@
+**
+!Dockerfile
+!.dockerignore
+!global.json
+!Directory.Build.props
+!nuget.config
+!src/
+!src/**
+src/**/bin/
+src/**/obj/
+!_image/
+!_image/packages/
+!_image/packages/**
+!_build/
+!_build/restore/
+!_build/restore/**

@@ -1,0 +1,7 @@
+{
+  "id": "datadog",
+  "version": "1.0.0",
+  "assembly": "SelfHostedEvaluators.Plugins.Datadog.dll",
+  "entryType": "SelfHostedEvaluators.Plugins.Datadog.DatadogPackage",
+  "abstractionsVersion": "1.0.0"
+}

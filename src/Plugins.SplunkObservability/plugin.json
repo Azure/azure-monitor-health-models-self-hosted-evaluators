@@ -1,0 +1,7 @@
+{
+  "id": "splunk-observability",
+  "version": "1.0.0",
+  "assembly": "SelfHostedEvaluators.Plugins.SplunkObservability.dll",
+  "entryType": "SelfHostedEvaluators.Plugins.SplunkObservability.SplunkObservabilityPackage",
+  "abstractionsVersion": "1.0.0"
+}

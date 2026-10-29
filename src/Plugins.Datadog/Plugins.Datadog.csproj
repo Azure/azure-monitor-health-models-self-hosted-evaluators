@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Plugins.Abstractions\Plugins.Abstractions.csproj" />
+    <Compile Include="..\Plugins.Common\PluginJson.cs" Link="Internal\PluginJson.cs" />
+    <None Update="plugin.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

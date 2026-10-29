@@ -1,0 +1,6 @@
+* text=auto eol=lf
+
+# Reviewed artifacts are preserved byte-for-byte.
+/docs/superpowers/specs/2026-09-25-self-hosted-evaluator-design.md -text
+/docs/superpowers/specs/2026-09-25-self-hosted-evaluator-system-diagram.md -text
+/docs/superpowers/specs/2026-09-25-self-hosted-evaluator-system-diagram.svg -text

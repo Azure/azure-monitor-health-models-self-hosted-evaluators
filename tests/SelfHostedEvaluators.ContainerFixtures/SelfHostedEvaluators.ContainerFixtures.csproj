@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>SelfHostedEvaluators.ContainerFixtures</RootNamespace>
+    <AssemblyName>SelfHostedEvaluators.ContainerFixtures</AssemblyName>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,7 @@
+{
+  "id": "static",
+  "version": "1.0.0",
+  "assembly": "SelfHostedEvaluators.Plugins.Static.dll",
+  "entryType": "SelfHostedEvaluators.Plugins.Static.StaticPackage",
+  "abstractionsVersion": "1.0.0"
+}

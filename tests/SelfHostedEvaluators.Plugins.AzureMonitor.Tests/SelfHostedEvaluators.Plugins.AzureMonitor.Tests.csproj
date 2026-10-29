@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SelfHostedEvaluators.Plugins.AzureMonitor.Tests</RootNamespace>
+    <AssemblyName>SelfHostedEvaluators.Plugins.AzureMonitor.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Plugins.AzureMonitor\Plugins.AzureMonitor.csproj" />
+    <ProjectReference Include="..\..\src\Plugins.Testing\Plugins.Testing.csproj" />
+  </ItemGroup>
+
+</Project>

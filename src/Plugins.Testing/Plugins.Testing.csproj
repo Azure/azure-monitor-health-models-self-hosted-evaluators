@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Plugins.Abstractions\Plugins.Abstractions.csproj" />
+    <PackageReference Include="NUnit" Version="4.3.2" />
+    <PackageReference Include="WireMock.Net" Version="2.19.0" />
+  </ItemGroup>
+
+</Project>

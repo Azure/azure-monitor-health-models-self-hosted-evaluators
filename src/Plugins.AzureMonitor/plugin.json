@@ -1,0 +1,7 @@
+{
+  "id": "azure-monitor",
+  "version": "1.0.0",
+  "assembly": "SelfHostedEvaluators.Plugins.AzureMonitor.dll",
+  "entryType": "SelfHostedEvaluators.Plugins.AzureMonitor.AzureMonitorPackage",
+  "abstractionsVersion": "1.0.0"
+}

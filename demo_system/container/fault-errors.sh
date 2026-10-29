@@ -1,0 +1,2 @@
+#!/bin/sh
+exec dotnet /app/Checkout.Demo.dll fault errors

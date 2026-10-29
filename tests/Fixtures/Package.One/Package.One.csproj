@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Fixture.Package</AssemblyName>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Plugins.Abstractions\Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\Private.One\Private.One.csproj" />
+  </ItemGroup>
+</Project>

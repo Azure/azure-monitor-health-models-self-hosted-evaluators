@@ -1,0 +1,61 @@
+[
+  {
+    "entity": "checkout-api",
+    "name": "p95-latency",
+    "plugin": "azure-monitor-demo",
+    "interval": "1m",
+    "query": {
+      "promql": "(1000 * histogram_quantile(0.95, sum by(le)(rate(http_request_duration_seconds_bucket{job=\"checkout\"}[5m])))) and on() (min(up{job=\"checkout\"} and (timestamp(up{job=\"checkout\"}) > time() - 120)) == 1)"
+    },
+    "evaluation": {
+      "degraded": { "operator": "GreaterThan", "threshold": 500 },
+      "unhealthy": { "operator": "GreaterThan", "threshold": 1000 },
+      "noData": "Unknown"
+    },
+    "context": "Checkout p95 latency: {{value}} milliseconds; {{healthState}}. {{detail}}"
+  },
+  {
+    "entity": "checkout-api",
+    "name": "checkout-error-rate",
+    "plugin": "azure-monitor-demo",
+    "interval": "1m",
+    "query": {
+      "promql": "(100 * sum(rate(http_requests_total{job=\"checkout\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"checkout\"}[5m]))) and on() (min(up{job=\"checkout\"} and (timestamp(up{job=\"checkout\"}) > time() - 120)) == 1)"
+    },
+    "evaluation": {
+      "degraded": { "operator": "GreaterThan", "threshold": 5 },
+      "unhealthy": { "operator": "GreaterThan", "threshold": 10 },
+      "noData": "Unknown"
+    },
+    "context": "Checkout server error rate: {{value}} percent; {{healthState}}. {{detail}}"
+  },
+  {
+    "entity": "checkout-api",
+    "name": "availability",
+    "plugin": "azure-monitor-demo",
+    "interval": "1m",
+    "query": {
+      "promql": "min(up{job=\"checkout\"} and (timestamp(up{job=\"checkout\"}) > time() - 120))"
+    },
+    "evaluation": {
+      "unhealthy": { "operator": "LessThan", "threshold": 1 },
+      "noData": "Unknown"
+    },
+    "context": "Checkout scrape availability: {{value}} (1 = up, 0 = down); {{healthState}}. {{detail}}"
+  },
+  {
+    "entity": "checkout-traffic",
+    "name": "traffic-freshness",
+    "plugin": "azure-monitor-demo",
+    "interval": "1m",
+    "query": {
+      "promql": "min((timestamp(checkout_last_request_timestamp_seconds{job=\"checkout\"}) - checkout_last_request_timestamp_seconds{job=\"checkout\"}) and (timestamp(checkout_last_request_timestamp_seconds{job=\"checkout\"}) > time() - 120)) and on() (min(up{job=\"checkout\"} and (timestamp(up{job=\"checkout\"}) > time() - 120)) == 1)"
+    },
+    "evaluation": {
+      "degraded": { "operator": "GreaterThan", "threshold": 30 },
+      "unhealthy": { "operator": "GreaterThan", "threshold": 60 },
+      "noData": "Unknown"
+    },
+    "context": "Checkout last request age: {{value}} seconds; {{healthState}}. {{detail}}"
+  }
+]

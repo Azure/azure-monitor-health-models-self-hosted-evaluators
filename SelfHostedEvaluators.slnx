@@ -1,0 +1,29 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Core/Core.csproj" />
+    <Project Path="src/Host/Host.csproj" />
+    <Project Path="src/Plugins.Abstractions/Plugins.Abstractions.csproj" />
+    <Project Path="src/Plugins.AzureMonitor/Plugins.AzureMonitor.csproj" />
+    <Project Path="src/Plugins.Datadog/Plugins.Datadog.csproj" />
+    <Project Path="src/Plugins.SplunkObservability/Plugins.SplunkObservability.csproj" />
+    <Project Path="src/Plugins.Static/Plugins.Static.csproj" />
+    <Project Path="src/Plugins.Testing/Plugins.Testing.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SelfHostedEvaluators.ContainerFixtures/SelfHostedEvaluators.ContainerFixtures.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Contracts.Tests/SelfHostedEvaluators.Contracts.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Core.Tests/SelfHostedEvaluators.Core.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Host.Tests/SelfHostedEvaluators.Host.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Plugins.AzureMonitor.Tests/SelfHostedEvaluators.Plugins.AzureMonitor.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Plugins.Datadog.Tests/SelfHostedEvaluators.Plugins.Datadog.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Plugins.SplunkObservability.Tests/SelfHostedEvaluators.Plugins.SplunkObservability.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Plugins.Static.Tests/SelfHostedEvaluators.Plugins.Static.Tests.csproj" />
+    <Project Path="tests/SelfHostedEvaluators.Plugins.Testing.Tests/SelfHostedEvaluators.Plugins.Testing.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Fixtures/">
+    <Project Path="tests/Fixtures/Package.One/Package.One.csproj" />
+    <Project Path="tests/Fixtures/Package.Two/Package.Two.csproj" />
+    <Project Path="tests/Fixtures/Private.One/Private.One.csproj" />
+    <Project Path="tests/Fixtures/Private.Two/Private.Two.csproj" />
+  </Folder>
+</Solution>
